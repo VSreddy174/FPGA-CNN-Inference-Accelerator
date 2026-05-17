@@ -14,7 +14,7 @@ The system layout is split into two distinct operational networks:
 
 Below is the complete hardware architectural layout showing the interconnect lines and block integration mapping:
 
-![Vivado Block Diagram](../docs/vivado_block_diagram.png)
+![Vivado Block Diagram](../docs/cnn_accel_vivado_bd.png)
 
 ---
 
