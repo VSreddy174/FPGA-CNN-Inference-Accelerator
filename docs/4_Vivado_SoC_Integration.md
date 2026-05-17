@@ -20,7 +20,7 @@ Below is the complete hardware architectural layout showing the interconnect lin
 
 ## 2. Block Design Connectivity and Port Routing
 
-The complete hardware system configuration is established by linking specific hardware blocks inside the Vivado block layout view. 
+The complete hardware system configuration is established by linking specific hardware blocks inside the Vivado block layout view. The configuration records are saved in the repository under [`/vivado_soc/`](../vivado_soc/).
 
 ### A. Processing System Setup (Zynq7 Processing System)
 The Zynq-7000 hard intellectual property (IP) block serves as the processing anchor.
@@ -41,6 +41,8 @@ The compiled HLS accelerator core sits between the inbound and outbound streamin
 * The input stream port (`S_AXIS`) connects directly to the DMA's memory-to-stream (`M_AXIS_MM2S`) transmission channel.
 * The output stream port (`M_AXIS`) connects directly to the DMA's stream-to-memory-mapped (`S_AXIS_S2MM`) capture channel.
 * The runtime control interface port (`s_axi_CONTROL_BUS`) hooks into the peripheral Interconnect network driven by the processing system's `M_AXI_GP0` interface.
+
+*(Note: The verification scripts and layout configurations tracking how interface anomalies like hidden 48-bit struct padding and missing TLAST errors were resolved are detailed in [7. Debugging Issues](7_Debugging_Issues.md) under Bug 7).*
 
 ---
 
