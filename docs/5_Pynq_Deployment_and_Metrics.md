@@ -60,9 +60,8 @@ The near-identical latency between the FPGA and the optimized TFLite library dem
 
 ### C. Accuracy and Operating Environment
 * **Accuracy Preservation:** The physical deployment achieved a final prediction accuracy of 97.00%, validating the INT8 fixed-scale calibration against the software baseline.
-* **Total On-Chip Power Dissipation:** 1.900 Watts
-* **Core Junction Operating Temperature:** 46.9°C (Maintains safe operational stability under normal laboratory conditions).
-
+* **Estimated On-Chip Power (Vivado Post-Implementation):** 1.900 Watts
+* **Estimated Junction Temperature:** 46.9°C (Confirms the board maintains safe operational stability under normal laboratory conditions without active cooling).
 ---
 
 ## 6. Real-Time Interactive Verification
