@@ -4,6 +4,22 @@ This document serves as the historical development log for the CNN accelerator p
 
 ---
 
+## Debug Summary Matrix
+
+Before diving into the technical logs of each specific error, the table below provides a quick-reference summary of the main debugging focus areas across the software, data formatting, and hardware compilation domains:
+
+| Bug Focus | Observed Symptom | Underlying Root Cause | Implemented Architectural Fix |
+| :--- | :--- | :--- | :--- |
+| **1. PTQ Saturation** | 10.5% Accuracy (Random Guessing) | Exponential $127^3$ scaling factor growth clipped activations. | Switched to empirical calibration on 1,000 images to derive fixed multipliers. |
+| **2. Input Typing** | Distortion/Errors on thick-lined digits | `int8` type mapping caused white pixel values (255) to wrap to -1. | Retyped input arrays to `ap_uint<8>` and applied late casting. |
+| **3. Output Read** | 0.00% Physical Accuracy on PYNQ board | PYNQ read 32-bit signed negative logit bits as large unsigned integers. | Applied a `.view(np.int32)` memory-view cast during Python post-processing. |
+| **4. Bus Alignment** | DMA Stream Hangs / PYNQ Linux Kernel Crashes | Dense 8-bit streaming mismatched the DMA's hardwired 32-bit channel width. | Implemented "shipping container" rule: cast input array to `np.uint32`. |
+| **5. Fixed-Point Word** | Drop to 73% / 70% Accuracy during testing | Word boundaries caused Integer Overflow (<16,6>) or Underflow (<16,9>). | Upgraded intermediate accumulators and biases to 32-bit signed integers. |
+| **6. Core Synthesis** | Synthesis engine stalled; estimated 2,020 DSPs | Aggressive outer-loop pipelining forced full structural unrolling. | Moved `#pragma HLS PIPELINE` to innermost loop to enforce temporal reuse. |
+| **7. Vivado Integration** | `TDATA_NUM_BYTES` width errors & missing TLAST | Compiler added padding to custom 41-bit struct, hiding control pins. | Abandoned custom struct for official `hls::axis<ap_uint<32>, 0, 0, 0>` template. |
+
+---
+
 ## Bug 1: The "10.5% Random Guessing" Saturation Failure
 
 ### Symptom & Observation
@@ -81,8 +97,8 @@ During the initial transition from floating-point matrices to a 16-bit fixed-poi
 
 ### Root Cause Analysis
 This behavior highlighted the classic hardware engineering trade-off between Dynamic Range and Fractional Precision within constrained word lengths:
-* **The 73% Accuracy Drop (`ap_fixed<16, 6>`):** This layout allocated 6 bits to the integer portion (range ±32) and 10 bits to the fractional portion. Because the final Dense layer aggregates 400 flattened elements, intermediate unscaled dot-products easily exceeded the absolute boundary of 32. This caused catastrophic Integer Overflow, wrapping confident positive prediction sums into arbitrary negative garbage values.
-* **The 70% Accuracy Drop (`ap_fixed<16, 9>`):** To eliminate the overflow, the word layout was modified to provide 9 integer bits (range ±256). However, this left only 7 bits for the fractional portion ($2^{-7}$ resolution step size). This resulted in Quantization Underflow, where small but highly critical neural weights and gradients fell below the resolution limit and were truncated to exactly zero, erasing fine-grained features from the network's parameters.
+* **The 73% Accuracy Drop (`ap_fixed<16, 6>`):** This layout allocated 6 bits to the integer portion (range $\pm32$) and 10 bits to the fractional portion. Because the final Dense layer aggregates 400 flattened elements, intermediate unscaled dot-products easily exceeded the absolute boundary of 32. This caused catastrophic Integer Overflow, wrapping confident positive prediction sums into arbitrary negative garbage values.
+* **The 70% Accuracy Drop (`ap_fixed<16, 9>`):** To eliminate the overflow, the word layout was modified to provide 9 integer bits (range $\pm256$). However, this left only 7 bits for the fractional portion ($2^{-7}$ resolution step size). This resulted in Quantization Underflow, where small but highly critical network weights fell below the resolution limit and were truncated to exactly zero, erasing fine-grained features from the network's parameters.
 
 ### Resolution & Core Learning
 The evaluation proved that a 16-bit total word boundary was mathematically insufficient to safely bridge the dynamic range requirements of a 400-input dense accumulation layer without data degradation. The system architecture was upgraded to utilize 32-bit signed integer accumulators (`int32`), providing extensive numerical safety boundaries while maintaining the area benefits of 8-bit quantized weights.
