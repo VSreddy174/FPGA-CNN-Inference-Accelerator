@@ -8,7 +8,7 @@ This document details the physical deployment framework on the PYNQ-Z2 hardware 
 
 The host environment runs on the embedded Linux kernel of the ARM Cortex-A9 processor utilizing the PYNQ framework. The Python notebook coordinating this layer is available in the repository at [`/notebooks/pynq_jupyter_notebook.ipynb`](../notebooks/pynq_jupyter_notebook.ipynb). The Python runtime acts as the high-level system executive manager that prepares execution vectors and interfaces with physical hardware layouts via memory-mapped input/output bindings.
 
-At boot runtime, the system instantiates the Overlay API to download the compiled hardware bitstream configuration ([`cnn_2layer_quant.bit`](../hardware_handoff/cnn_2layer_quant.bit)) onto the programmable logic fabric. This interaction dynamically reprograms the FPGA fabric and activates the hardware-mapped register structures matching the Vivado block design layout.
+At boot runtime, the system instantiates the Overlay API to download the compiled hardware bitstream configuration ([`cnn_2layer_quant.bit`](../hardware_handoff/)) onto the programmable logic fabric. This interaction dynamically reprograms the FPGA fabric and activates the hardware-mapped register structures matching the Vivado block design layout.
 
 ---
 
