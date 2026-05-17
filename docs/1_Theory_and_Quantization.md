@@ -25,7 +25,7 @@ The model baseline was developed in Python using TensorFlow/Keras on Google Cola
 * **Dataset:** MNIST Digits containing 60,000 training samples and 10,000 testing samples.
 * **Preprocessing:** Input pixels scaled linearly from integer ranges into standard floating-point numbers between 0.0 and 1.0.
 * **Loss Function:** Categorical crossentropy configured from logits. Omitting the Softmax activation function in hardware ensures numerical stability and prevents complex division/exponentiation blocks from hogging FPGA logic.
-* **Baseline Validation Results:** The floating-point Python baseline achieved a high-accuracy reference profile, serving as our golden model.
+* **Baseline Validation Results:** The floating-point Python baseline achieved a high-accuracy (>98%) reference profile, serving as our golden model.
 
 ---
 
