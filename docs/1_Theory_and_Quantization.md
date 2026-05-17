@@ -1,12 +1,12 @@
 # 1. Mathematical Theory & Post-Training Quantization (PTQ)
 
-This document details the mathematical framework of the sequential Convolutional Neural Network (CNN) hardware accelerator built for MNIST digit classification, its training pipeline in Google Colab, and the fixed-scale Post-Training Quantization (PTQ) strategy used to map floating-point operations onto hardware fabric safely.
+This document details the mathematical framework of the sequential Convolutional Neural Network (CNN) hardware accelerator built for MNIST digit classification, its training pipeline in Google Colab, and the fixed-scale Post-Training Quantization (PTQ) calibration strategy used to map floating-point operations onto hardware fabric safely.
 
 ---
 
 ## 1. Network Architecture Specifications
 
-To achieve efficient execution within the constraints of the Xilinx Zynq-7000 SoC and target full parallel execution, a highly compressed 2-layer sequential CNN architecture was selected. The network uses a total of 5,258 trainable parameters, which fits completely within the on-chip Block RAM (BRAM) and DSP blocks without requiring external memory sweeps for weights during live streaming inference.
+To achieve efficient execution within the constraints of the Xilinx Zynq-7000 SoC and target full parallel execution, a highly compressed sequential CNN architecture was selected. The network uses a total of 5,258 trainable parameters, which fits completely within the on-chip Block RAM (BRAM) and DSP blocks without requiring external memory sweeps for weights during live streaming inference.
 
 The hardware network architecture is structured sequentially as follows:
 
@@ -29,31 +29,32 @@ The model baseline was developed in Python using TensorFlow/Keras on Google Cola
 
 ---
 
-## 3. Post-Training Quantization (PTQ) Strategy
+## 3. Post-Training Quantization (PTQ) & Calibration Strategy
 
 Standard FPGAs do not natively compute floating-point operations efficiently; mapping raw variables directly onto hardware requires significant fabric area and ruins processing throughput. To resolve this, a uniform Fixed-Scale Post-Training Quantization (PTQ) routine was designed.
 
-### Fixed-Point Scale Mapping
-Weights, biases, and streaming data items were mapped into signed integers using symmetric scaling equations where the floating-point value is multiplied by a scale factor and rounded to the nearest integer. During characterization sweeps across the parameter ranges, a fixed scaling factor of 127 was chosen to align with the boundaries of an 8-bit signed integer.
+### Bit-Width Allocation and Typing
+To preserve maximum accuracy while optimizing hardware space, the final working implementation utilizes a strict mixed bit-width allocation layout to govern the streaming data:
+* **Weights:** Stored as strict 8-bit signed integers (`int8`) to save logic space and match internal DSP register structures.
+* **Input Pixels:** Strictly processed as 8-bit unsigned integers (`ap_uint<8>`). This ensures that peak white pixels containing a raw value of 255 do not experience sign-bit wraparound to -1, which would distort image data. Input pixels are cast to signed 32-bit values only at the exact moment of arithmetic multiplication.
+* **Biases and Accumulators:** Allocated as 32-bit signed integers (`int32`) to match the dynamic ranges of the computing nodes and provide vast numerical headroom.
 
-### Bit-Width Allocation and Scaling Targets
-To preserve maximum accuracy while optimizing hardware space, the final working implementation utilizes a strict mixed bit-width allocation layout:
-* **Weights:** Stored as strict 8-bit signed integers to save logic space and match register structures.
-* **Biases:** Allocated as 32-bit signed integers to match the dynamic ranges of the computing nodes.
+### Activation Calibration and Re-Quantization
+Rather than allowing scaling factors to exponentially grow across the layers—which would lead to massive bit growth and saturation errors—the architecture utilizes an explicit calibration phase. 
 
-When multiplying an 8-bit image pixel by an 8-bit convolution weight, the scale factors multiply together. To maintain mathematical correctness across the layers, the respective layer 32-bit biases were scaled up systematically to match these higher internal dynamic ranges:
-* **Convolution Bias Scaling:** Scaled by the product of the input and weight scaling factors (127 multiplied by 127 equals 16,129.0).
-* **Dense Bias Scaling:** Scaled by the accumulated product of all preceding layer factors (127 multiplied by 127 multiplied by 127 equals 2,048,383.0) to prevent precision misalignment.
+A post-training calibration step was performed on 1,000 representative training images to determine the global maximum activations at each stage. These values were used to derive fixed, static inter-layer re-quantization scaling multipliers:
+* **Layer 1 Scaling Factor (`L1_SCALE`):** Evaluated at a static value of `0.001327`.
+* **Layer 2 Scaling Factor (`L2_SCALE`):** Evaluated at a static value of `0.002090`.
+
+At the end of each layer pipeline, the hardware multiplies the intermediate 32-bit accumulated sum by these pre-computed constants. This safely scales and re-quantizes the intermediate data paths back down into the standard 8-bit range before feeding the data forward into the subsequent processing block.
 
 ---
 
-## 4. Arithmetic Protection Layout: 8-bit Inputs with 32-bit Accumulators
+## 4. Arithmetic Protection Layout: 32-bit Accumulators
 
-The final hardware implementation relies on a highly efficient data path designed to eliminate arithmetic distortion:
-* All streaming weights and input arrays are restricted to strict 8-bit signed integers, which maps perfectly onto individual FPGA hardware registers.
-* The internal multi-accumulation calculation blocks use 32-bit signed integers. 
+The final hardware implementation relies on a highly efficient data path designed to eliminate arithmetic distortion. During execution, the unrolled parallel loop operations across the convolutional and dense layers carry out heavy dot-product calculations. 
 
-Using 32-bit signed integers for the accumulators provides vast numerical headroom. This completely eliminates intermediate arithmetic overflow during parallel loops, preserving a high fixed-point hardware deployment accuracy of 97.00% over the software baseline.
+By mapping the mathematical operations into 32-bit signed integer accumulation registers, the core provides extensive numerical safety boundaries. This structure completely eliminates intermediate arithmetic overflow during parallel runtime loops, preserving a high fixed-point hardware deployment accuracy of 97.00% over the software baseline.
 
 ---
 
