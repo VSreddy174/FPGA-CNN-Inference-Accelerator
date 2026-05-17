@@ -41,12 +41,6 @@ The optimization pragmas injected into the loops forced the nested mathematical 
 
 ## 3. Pre-Synthesis Resource Utilization Estimates
 
-The Vitis HLS compiler automatically profiles the logic structures and outputs an initial estimation of the physical hardware primitives required to implement the unrolled parallel calculation layers.
+The Vitis HLS compiler automatically profiles the logic structures and outputs an initial estimation of the physical hardware primitives required to implement the unrolled parallel calculation layers. Pre-synthesis profiling estimated high DSP utilization (213 blocks out of 220 available) to manage the parallelized matrix multiplications across the convolutional pipelines.
 
-The pre-synthesis report projected the following resource allocation layout:
-* **DSP48E Slices:** Estimated at 213 blocks out of the 220 physically available on the PYNQ-Z2 board (~97% structural allocation). The compiler successfully clustered the parallelized matrix multiplications from the convolutional layers into these hardwired math blocks to optimize processing density.
-* **Look-Up Tables (LUTs):** Projected at 31,760 blocks, providing the combinational fabric necessary to handle the streaming AXI multiplexing network, ReLU activation paths, and pointer index decoding.
-* **Flip-Flops (FFs):** Estimated at 11,095 registers to latch intermediate variables and state bits across the deeply pipelined execution stages.
-* **Block RAM (BRAM):** Projected at 2 blocks to store static structural weight arrays and handle internal stream FIFO buffers.
-
-*Note: These values are pre-layout compiler estimations. As analyzed in later modules, these resource boundaries shift and optimize during Vivado Synthesis and physical Place and Route (Implementation), where physical wire layouts alter logic gates configuration.*
+For the complete tracking of how these initial estimates translated into actual gate configurations and physical logic structures during placement and routing, please refer to the comparative **Resource Utilization Trajectory** matrix in [6. Post-Implementation Analysis](6_Post_Implementation_Analysis.md).
