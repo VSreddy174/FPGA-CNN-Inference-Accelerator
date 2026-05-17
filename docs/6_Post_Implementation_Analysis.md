@@ -37,7 +37,7 @@ Tracking hardware primitives across compilation phases demonstrates how the phys
 | **Slice LUTs** | 31,760 | 22,231 | 21,943 | 53,200 | 41.25% |
 | **Slice Registers** | 11,095 | 13,842 | 13,656 | 106,400 | 12.83% |
 | **Block RAM (BRAM)** | 2.0 | 7.0 | 7.0 | 140 | 5.00% |
-| **DSP48E Slices** | 213 | 220 | 220 | 220 | 100.00% |
+| **DSP48E Slices** | 213 | 220 | 220 | 220 | **100.00%** |
 
 ### Resource Profiling & Optimization Insights:
 * **Look-Up Tables (LUTs):** The HLS compiler initially over-estimated LUT usage at 31,760. Vivado's physical mapping tools systematically optimized the combinational pathways, reducing the final footprint to 21,943 LUTs.
