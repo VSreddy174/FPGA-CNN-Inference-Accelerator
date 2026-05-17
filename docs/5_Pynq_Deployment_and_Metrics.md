@@ -6,9 +6,9 @@ This document details the physical deployment framework on the PYNQ-Z2 hardware 
 
 ## 1. Embedded Software Driver Infrastructure
 
-The host environment runs on the embedded Linux kernel of the ARM Cortex-A9 processor utilizing the PYNQ framework. The Python runtime acts as the high-level system executive manager that prepares execution vectors and interfaces with physical hardware layouts via memory-mapped input/output bindings.
+The host environment runs on the embedded Linux kernel of the ARM Cortex-A9 processor utilizing the PYNQ framework. The Python notebook coordinating this layer is available in the repository at [`/notebooks/pynq_jupyter_notebook.ipynb`](../notebooks/pynq_jupyter_notebook.ipynb). The Python runtime acts as the high-level system executive manager that prepares execution vectors and interfaces with physical hardware layouts via memory-mapped input/output bindings.
 
-At boot runtime, the system instantiates the Overlay API to download the compiled hardware bitstream configuration onto the programmable logic fabric. This interaction dynamically reprograms the FPGA fabric and activates the hardware-mapped register structures matching the Vivado block design layout.
+At boot runtime, the system instantiates the Overlay API to download the compiled hardware bitstream configuration ([`cnn_2layer_quant.bit`](../hardware_handoff/cnn_2layer_quant.bit)) onto the programmable logic fabric. This interaction dynamically reprograms the FPGA fabric and activates the hardware-mapped register structures matching the Vivado block design layout.
 
 ---
 
@@ -18,6 +18,8 @@ Standard Linux virtual memory allocation fragments memory spaces into non-contig
 
 * **Buffer Reservation:** The system utilizes the PYNQ allocation API to reserve uninterrupted physical memory blocks directly within the shared onboard DDR memory pool.
 * **Typing Adjustments (The 32-bit Wrapper):** To prevent AXI bus misalignment, the 784-byte image array is cast into 32-bit unsigned integers (`np.uint32`). This ensures each 8-bit pixel is padded to perfectly fit the 32-bit width of the DMA channel without triggering byte-alignment errors. The outbound classification buffer is allocated as a 10-element `np.uint32` array to receive the raw hardware bits, which are later actively parsed into signed 32-bit integers during software post-processing.
+
+*(Note: The troubleshooting logs regarding the unsigned 0% accuracy reading bug and the 32-bit alignment bus crashes are documented comprehensively in [7. Debugging Issues](7_Debugging_Issues.md) under Bug 3 and Bug 4).*
 
 ---
 
@@ -42,16 +44,19 @@ When the interrupt releases the execution thread, the raw scores are finalized w
 
 ## 5. Physical Hardware Benchmarks
 
-The entire computing system was validated by processing an inference loop across test vector batches from the MNIST evaluation set.
+The entire computing system was validated by processing an inference loop across test vector batches from the MNIST evaluation set. 
 
-### A. Performance and Speedup Analysis
-* **Software Baseline Latency (Manual Python ARM Cortex-A9):** ~1,496.53 ms
-* **TFLite Baseline Latency (Optimized C++ ARM Cortex-A9):** ~1.10 ms
-* **Hardware Accelerator Latency (Custom HLS IP):** ~1.11 ms (Encompasses physical DMA streaming, hardware core calculations, interrupt handshakes, and Python overhead).
-* **Measured Hardware Speedup:** 1,351x Faster execution throughput over the manual software processor baseline.
+### A. Performance Latency Matrix
+The comparative execution profiles across the different processing environments are structured below:
+
+| Platform / Environment | Execution Model | Average Inference Latency | Target Speedup Factor |
+| :--- | :--- | :---: | :---: |
+| **ARM Cortex-A9 CPU** | Manual Python Loop | ~1,496.53 ms | 1x (Base Reference) |
+| **ARM Cortex-A9 CPU** | Optimized C++ TFLite Engine | ~1.10 ms | 1,360x Faster |
+| **PYNQ-Z2 FPGA Fabric** | Custom Streaming HLS IP | **~1.11 ms** | **1,351x Faster** |
 
 ### B. System Bottleneck Observation
-The near-identical latency between the FPGA and the optimized TFLite library demonstrates that for small images (28x28), the system is I/O-bound by the Python execution and DMA driver overhead, masking the true microsecond-level calculation speed of the FPGA fabric. 
+The near-identical latency between the FPGA and the optimized TFLite library demonstrates that for small images (28x28), the system is I/O-bound by the Python execution stack and DMA driver handshake overhead, masking the true microsecond-level calculation speed of the isolated FPGA fabric blocks.
 
 ### C. Accuracy and Operating Environment
 * **Accuracy Preservation:** The physical deployment achieved a final prediction accuracy of 97.00%, validating the INT8 fixed-scale calibration against the software baseline.
