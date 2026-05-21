@@ -71,3 +71,6 @@ The project documentation is divided into the following technical modules, outli
 * **[5. Pynq Deployment and Metrics](docs/5_Pynq_Deployment_and_Metrics.md):** Physical memory configuration via Python runtime drivers, contiguous buffer management, I/O bottleneck evaluations, and interactive canvas canvas testing.
 * **[6. Post-Implementation Analysis](docs/6_Post_Implementation_Analysis.md):** Physical layout routing constraints analysis, Stage-by-Stage setup timing slack tracking, power/thermal metrics, and 186-count DSP Design Rule Check (DRC) evaluations.
 * **[7. Debugging Issues](docs/7_Debugging_Issues.md):** Complete architectural trouble log capturing the 7 critical software, data-formatting, and hardware-level compilation bugs solved over the project lifecycle.
+
+
+*Note:* The core sequential documentation network ([Modules 1 through 7](docs/)) charts the end-to-end production deployment flow targeted directly onto the physical PYNQ-Z2 hardware layout, whereas isolated architectural optimizations and hardware portability experiments are tracked separately inside the [`/other_expts/`](other_expts/) research directory.
